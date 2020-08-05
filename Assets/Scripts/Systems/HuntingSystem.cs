@@ -2,16 +2,24 @@
 using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.Collections;
+using Unity.Jobs;
 
-public class HuntingSystem : SystemBase
+public class HuntingSystem : JobComponentSystem
 {
-    protected override void OnUpdate()
+    private struct SearchPreyJob : IJob
     {
-        // float deltaTime = Time.DeltaTime;
+        public NativeArray<float3> result;
+        public void Execute()
+        {
+            result[0] = new float3(0f, 0f, 0f);
+        }
+    }
+    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    {
         EntityQuery entityQuery = GetEntityQuery(typeof(HerbivoreTag), ComponentType.ReadOnly<Translation>());
         NativeArray<Translation> preys = entityQuery.ToComponentDataArray<Translation>(Unity.Collections.Allocator.TempJob);
 
-        Entities.WithAll<PredatorTag>().ForEach(
+        JobHandle jobHandle = Entities.WithAll<PredatorTag>().ForEach(
             (ref Translation translation, ref MoveData moveData)
             =>
             {
@@ -28,6 +36,7 @@ public class HuntingSystem : SystemBase
                 // set MoveData to direction away from neares predator
                 moveData.direction = math.normalizesafe(nearestPreyPosition - translation.Value);
             }
-            ).ScheduleParallel();
+            ).WithDisposeOnCompletion(preys).Schedule(inputDeps);
+        return jobHandle;
     }
 }
