@@ -5,18 +5,18 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.Jobs;
 
-public class PlayerMovementSystem : JobComponentSystem
+public class PlayerMovementSystem : SystemBase
 {
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    protected override void OnUpdate()
     {
         float deltaTime = Time.DeltaTime;
-        return Entities.ForEach(
+        Entities.ForEach(
             (ref Translation translation, in MoveData moveData) 
             => 
             {
                 float3 normalizeDir = math.normalizesafe(moveData.direction);
                 translation.Value += normalizeDir * moveData.speed * deltaTime;
             })
-        .Schedule(inputDeps);
+        .Schedule();
     }
 }

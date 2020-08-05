@@ -5,15 +5,15 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Jobs;
 
-public class RunawaySystem : JobComponentSystem
+public class RunawaySystem : SystemBase
 {
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    protected override void OnUpdate()
     {
         // float deltaTime = Time.DeltaTime;
         EntityQuery entityQuery = GetEntityQuery(typeof(PredatorTag), ComponentType.ReadOnly<Translation>());
         NativeArray<Translation> predators = entityQuery.ToComponentDataArray<Translation>(Unity.Collections.Allocator.TempJob);
 
-        return Entities.WithAll<HerbivoreTag>().ForEach(
+        Entities.WithAll<HerbivoreTag>().ForEach(
             (ref Translation translation, ref MoveData moveData)
             =>
             {
@@ -25,12 +25,11 @@ public class RunawaySystem : JobComponentSystem
                     {
                         nearestPredatorPosition = predators[i].Value;
                     }
-                    Debug.Log(nearestPredatorPosition);
                 }
 
                 // set MoveData to direction away from neares predator
                 moveData.direction = math.normalizesafe(translation.Value - nearestPredatorPosition);
             }
-            ).WithDisposeOnCompletion(predators).Schedule(inputDeps);
+            ).WithDisposeOnCompletion(predators).ScheduleParallel();
     }
 }

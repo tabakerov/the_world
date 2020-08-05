@@ -4,7 +4,7 @@ using Unity.Transforms;
 using Unity.Collections;
 using Unity.Jobs;
 
-public class HuntingSystem : JobComponentSystem
+public class HuntingSystem : SystemBase
 {
     private struct SearchPreyJob : IJob
     {
@@ -14,12 +14,12 @@ public class HuntingSystem : JobComponentSystem
             result[0] = new float3(0f, 0f, 0f);
         }
     }
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    protected override void OnUpdate()
     {
         EntityQuery entityQuery = GetEntityQuery(typeof(HerbivoreTag), ComponentType.ReadOnly<Translation>());
         NativeArray<Translation> preys = entityQuery.ToComponentDataArray<Translation>(Unity.Collections.Allocator.TempJob);
 
-        JobHandle jobHandle = Entities.WithAll<PredatorTag>().ForEach(
+        Entities.WithAll<PredatorTag>().ForEach(
             (ref Translation translation, ref MoveData moveData)
             =>
             {
@@ -36,7 +36,6 @@ public class HuntingSystem : JobComponentSystem
                 // set MoveData to direction away from neares predator
                 moveData.direction = math.normalizesafe(nearestPreyPosition - translation.Value);
             }
-            ).WithDisposeOnCompletion(preys).Schedule(inputDeps);
-        return jobHandle;
+            ).WithDisposeOnCompletion(preys).ScheduleParallel();
     }
 }
